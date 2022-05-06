@@ -7,9 +7,19 @@ def main():
     try:
         args = load_args()
         print(args)
+        input_data_frame = get_df(args.get(class_utils.Env.input_file1),
+                                  args.get(class_utils.Env.input_file2))
+        print(input_data_frame)
     except Exception as ex:
         print(ex)
         return
+
+def get_df(input_file1, input_file2):
+    df1 = pd.read_csv(input_file1, header=None)
+    df2 = pd.read_csv(input_file2, header=None)
+    final_df = pd.merge(df1, df2, how='inner', on=0)
+    return final_df.iloc[:, 1:]
+
 
 
 def load_args():
