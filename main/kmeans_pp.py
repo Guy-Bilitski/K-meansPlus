@@ -3,7 +3,14 @@ import sys
 import pandas as pd
 import numpy as np
 from scipy.misc import central_diff_weights
-from kmeans_class_utils import Centroid, Env
+
+class Env:
+    """ Class for global variables used in the system """
+    k = "k"
+    epsilon = "epsilon"
+    input_file1 = "input_file1"
+    input_file2 = "input_file2"
+    maxiter = "maxiter"
 
 def main():
     try:
@@ -12,8 +19,7 @@ def main():
                                   args.get(Env.input_file2))
         np_array = pd.DataFrame.to_numpy(input_data_frame, dtype=float)
         get_centriods(np_array, args.get(Env.k))
-        
-        
+        # Here comes the integration
     except Exception as ex:
         print(ex)
         return
@@ -26,7 +32,6 @@ def get_centriods(np_array, k):
     centroids = [c1]
     weighted_p = [0]*100
 
-    
     for _ in range(k - 1):
         for j in range(n):
             x = np_array[j]
@@ -40,13 +45,11 @@ def get_centriods(np_array, k):
     print(centroids)
 
 
-
 def get_df(input_file1, input_file2):
     df1 = pd.read_csv(input_file1, header=None, dtype=float)
     df2 = pd.read_csv(input_file2, header=None, dtype=float)
     final_df = pd.merge(df1, df2, how='inner', on=0)
     return final_df.iloc[:, 1:]
-
 
 
 def load_args():
@@ -80,6 +83,5 @@ def load_args():
         raise Exception("Invalid Input!")
     
     return args
-
 
 main()
