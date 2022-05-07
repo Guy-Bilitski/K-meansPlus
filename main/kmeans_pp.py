@@ -2,7 +2,7 @@ from operator import indexOf
 import sys
 import pandas as pd
 import numpy as np
-from scipy.misc import central_diff_weights
+import time
 
 class Env:
     """ Class for global variables used in the system """
@@ -13,16 +13,19 @@ class Env:
     maxiter = "maxiter"
 
 def main():
+    t = time.perf_counter()
     try:
         args = load_args()
         input_data_frame = get_df(args.get(Env.input_file1),
                                   args.get(Env.input_file2))
         np_array = pd.DataFrame.to_numpy(input_data_frame, dtype=float)
-        get_centriods(np_array, args.get(Env.k))
+        initial_centroids = get_centriods(np_array, args.get(Env.k))
         # Here comes the integration
     except Exception as ex:
         print(ex)
         return
+    print(time.perf_counter()-t)
+    print(initial_centroids)
 
 
 def get_centriods(np_array, k):
@@ -30,26 +33,25 @@ def get_centriods(np_array, k):
     n = np_array.shape[0]
     c1 = np_array[np.random.choice(n)]
     centroids = [c1]
-    weighted_p = [0]*100
+    weighted_p = np.zeros(n, dtype=float)
 
     for _ in range(k - 1):
         for j in range(n):
             x = np_array[j]
-            closest_c = min(centroids, key=lambda c: np.linalg.norm(x - c))
-            weighted_p[j] = np.linalg.norm(x-closest_c)
+            weighted_p[j] = min(np.linalg.norm(x - c) for c in centroids)
         distance_sum = sum(weighted_p)
-        weighted_p = list(map(lambda x: x / distance_sum, weighted_p))
+        np.divide(weighted_p, distance_sum, out=weighted_p)
         new_cent_index = np.random.choice(n, p=weighted_p)
         centroids.append(np_array[new_cent_index])
-    
-    print(centroids)
+    return centroids
 
 
 def get_df(input_file1, input_file2):
     df1 = pd.read_csv(input_file1, header=None, dtype=float)
     df2 = pd.read_csv(input_file2, header=None, dtype=float)
-    final_df = pd.merge(df1, df2, how='inner', on=0)
-    return final_df.iloc[:, 1:]
+    final_df = pd.merge(df1, df2, how='inner', on=0, copy=False)
+    final_df.drop(columns=0, inplace=True)
+    return final_df
 
 
 def load_args():
