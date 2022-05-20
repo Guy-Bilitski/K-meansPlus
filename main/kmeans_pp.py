@@ -38,7 +38,7 @@ def get_centriods(np_array, k):
     for _ in range(k - 1):
         for j in range(n):
             x = np_array[j]
-            weighted_p[j] = min(np.linalg.norm(x - c) for c in centroids)
+            weighted_p[j] = (min(np.linalg.norm(x - c) for c in centroids))**2
         distance_sum = sum(weighted_p)
         np.divide(weighted_p, distance_sum, out=weighted_p)
         new_cent_index = np.random.choice(n, p=weighted_p)
