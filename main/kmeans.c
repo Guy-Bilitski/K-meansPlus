@@ -1,10 +1,7 @@
-#include <stdio.h>
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#define PY_SSIZE_T_CLEAN
+#include "Python3.9/Python.h"
 #include <float.h>
 #include <math.h>
-#include <limits.h>
 #include <ctype.h>
 
 int initialize_centroids(int k, int dim, char *input_file, double**);
