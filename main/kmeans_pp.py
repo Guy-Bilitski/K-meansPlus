@@ -18,14 +18,15 @@ def main():
         args = load_args()
         input_data_frame = get_df(args.get(Env.input_file1),
                                   args.get(Env.input_file2))
-        np_array = pd.DataFrame.to_numpy(input_data_frame, dtype=float)
-        initial_centroids = get_centriods(np_array, args.get(Env.k))
+        data_points = pd.DataFrame.to_numpy(input_data_frame, dtype=float)
+        initial_centroids = get_centriods(data_points, args.get(Env.k))
         # Here comes the integration
     except Exception as ex:
         print(ex)
         return
+    
     print(time.perf_counter()-t)
-    print(initial_centroids)
+    #ckmeans(data_points, initial_centroids, )
 
 
 def get_centriods(np_array, k):
@@ -43,13 +44,13 @@ def get_centriods(np_array, k):
         np.divide(weighted_p, distance_sum, out=weighted_p)
         new_cent_index = np.random.choice(n, p=weighted_p)
         centroids.append(np_array[new_cent_index])
-    return centroids
+    return [c.tolist() for c in centroids]
 
 
 def get_df(input_file1, input_file2):
     df1 = pd.read_csv(input_file1, header=None, dtype=float)
     df2 = pd.read_csv(input_file2, header=None, dtype=float)
-    final_df = pd.merge(df1, df2, how='inner', on=0, copy=False)
+    final_df = pd.merge(df1, df2, how='inner', on=0, copy=False, sort=True)
     final_df.drop(columns=0, inplace=True)
     return final_df
 

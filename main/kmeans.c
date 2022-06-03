@@ -1,9 +1,10 @@
 #define PY_SSIZE_T_CLEAN
-#include "Python3.9/Python.h"
+#include <Python.h>
 #include <float.h>
 #include <math.h>
 #include <ctype.h>
 
+int kmeans(PyObject *d, PyObject *centroids, int maxiter, double epsilon);
 int initialize_centroids(int k, int dim, char *input_file, double**);
 int get_dimension(char *input_file);
 double max_distance_between_centroids(int k, int dim, double **old_centroids, double **new_centroids);
@@ -15,9 +16,9 @@ int checkForZeros(int k, int dim, double **centroids);
 void printcentroids(int k, int d, double **c);
 
 
-int main(int argc, char **argv)
+int kmeans(PyObject *d, PyObject *centroids, int maxiter, double epsilon)
 {
-    char *output_filename, *input_filename;
+    char *output_filename, *input_filename; //TODO: delete
     int k, maxiter, dim, initialize_error, error;
     double **centroids, **new_centroids, **temp;
     double maxd;
@@ -27,10 +28,7 @@ int main(int argc, char **argv)
     input_filename = argv[argc-2];
     output_filename = argv[argc-1];
     maxiter = argc==5 ? atoi(argv[2]) : INT_MAX;
-    if (maxiter <= 0 || k <= 0 || argc < 4 || argc > 5) {
-        printf("Invalid Input!");
-        return 1;
-    }
+    
 
     dim = get_dimension(input_filename);
     if (dim == -1){
@@ -289,4 +287,49 @@ void printcentroids(int k, int d, double **c){
         }
         printf(" numOfVecs=%.4f\n", c[i][d]);
     }
+}
+
+
+static PyObject* kmeans_capi(PyObject *self, PyObject *args){
+    PyObject *data_points, *init_centroids;
+    double maxiter, epsilon;
+
+    if (!PyArg_ParseTuple(args, "OOdi", &data_points, &init_centroids, &maxiter, &epsilon)){
+        printf("An Error Has Occurred");
+        return 1;
+    }
+
+    return Py_BuildValue("O", kmeans(data_points, init_centroids, maxiter, epsilon));
+}
+
+static PyMethodDef capiMethods[] = {
+    {
+        "getKmeans",
+        (PyCFunction) kmeans_capi,
+        METH_VARARGS,
+        PyDoc_STR("Args:\nData-Points: ndarray,\nCentroids: list[list]\nmaxiter: int\nepsilon: float")
+    },
+    {
+        NULL, NULL, 0, NULL
+    }
+};
+
+static struct PyModuleDef moduledef =
+{
+    PyModuleDef_HEAD_INIT,
+    "mykmeanssp",
+    "My Kmeans Module",
+    -1,
+    capiMethods
+};
+
+
+PyMODINIT_FUNC PyInit_mykmeanssp(void) {
+    PyObject *m;
+    m=PyModule_Create(&moduledef);
+    if (!m) {
+        printf("An Error Has Occurred");
+        return 1;
+    }
+    return m;
 }
