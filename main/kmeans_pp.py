@@ -1,8 +1,10 @@
+from mimetypes import init
 from operator import indexOf
 import sys
 import pandas as pd
 import numpy as np
 import time
+import mykmeanssp
 
 class Env:
     """ Class for global variables used in the system """
@@ -13,20 +15,19 @@ class Env:
     maxiter = "maxiter"
 
 def main():
-    t = time.perf_counter()
     try:
         args = load_args()
         input_data_frame = get_df(args.get(Env.input_file1),
                                   args.get(Env.input_file2))
         data_points = pd.DataFrame.to_numpy(input_data_frame, dtype=float)
         initial_centroids = get_centriods(data_points, args.get(Env.k))
-        # Here comes the integration
+        data_points = [c.tolist() for c in data_points]
+        # Here come s the integration
+        mykmeanssp.getKmeans(data_points, initial_centroids, args.get(Env.maxiter, -1), args.get(Env.epsilon))
     except Exception as ex:
         print(ex)
         return
     
-    print(time.perf_counter()-t)
-    #ckmeans(data_points, initial_centroids, )
 
 
 def get_centriods(np_array, k):
@@ -58,7 +59,7 @@ def get_df(input_file1, input_file2):
 def load_args():
     """ returns a dict with all args that mentioned in ENV class and inputted """
     inp = sys.argv
-    print (inp)
+
     args = {}
     if len(inp) < 5 or len(inp) > 6:
         raise Exception("Invalid Input!")
@@ -73,7 +74,7 @@ def load_args():
         if epsilon <= 0:
             raise
         else:
-            args[Env.epsilon] = inp[-3]
+            args[Env.epsilon] = epsilon
 
         if len(inp) == 6: # Checking maxiter exists
             maxiter = int(inp[2])

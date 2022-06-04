@@ -4,7 +4,7 @@
 #include <math.h>
 #include <ctype.h>
 
-int kmeans(PyObject *d, PyObject *centroids, int maxiter, double epsilon);
+int kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsilon);
 int initialize_centroids(int k, int dim, char *input_file, double**);
 int get_dimension(char *input_file);
 double max_distance_between_centroids(int k, int dim, double **old_centroids, double **new_centroids);
@@ -16,79 +16,80 @@ int checkForZeros(int k, int dim, double **centroids);
 void printcentroids(int k, int d, double **c);
 
 
-int kmeans(PyObject *d, PyObject *centroids, int maxiter, double epsilon)
-{
-    char *output_filename, *input_filename; //TODO: delete
-    int k, maxiter, dim, initialize_error, error;
-    double **centroids, **new_centroids, **temp;
-    double maxd;
-    int i;
+int kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsilon)
+{      
 
-    k = atoi(argv[1]);
-    input_filename = argv[argc-2];
-    output_filename = argv[argc-1];
-    maxiter = argc==5 ? atoi(argv[2]) : INT_MAX;
+    // char *output_filename, *input_filename; //TODO: delete
+    // int k, dim, initialize_error, error;
+    // double **centroids, **new_centroids, **temp;
+    // double maxd;
+    // int i;
+
+    //TODO: find k
+    //TODO: check if maxiter
+    //maxiter = argc==5 ? atoi(argv[2]) : INT_MAX;
     
 
-    dim = get_dimension(input_filename);
-    if (dim == -1){
-        printf("An Error Has Occurred");
-        return 1;
-    }
 
-    centroids = calloc(k, sizeof(double *));
-    new_centroids = calloc(k, sizeof(double *));
-    if (centroids == NULL || new_centroids == NULL){
-        printf("An Error Has Occurred");
-        return 1;
-    }
+    // dim = get_dimension(input_filename);
+    // if (dim == -1){
+    //     printf("An Error Has Occurred");
+    //     return 1;
+    // }
+
+    // centroids = calloc(k, sizeof(double *));
+    // new_centroids = calloc(k, sizeof(double *));
+    // if (centroids == NULL || new_centroids == NULL){
+    //     printf("An Error Has Occurred");
+    //     return 1;
+    // }
     
-    for (i=0; i < k; i++) {
-        centroids[i] = calloc(dim + 1, sizeof(double));
-        new_centroids[i] = calloc(dim + 1, sizeof(double));
-        if (centroids[i] == NULL || new_centroids[i] == NULL){
-            printf("An Error Has Occurred");
-            return 1;
-        }
-    }
+    // for (i=0; i < k; i++) {
+    //     centroids[i] = calloc(dim + 1, sizeof(double));
+    //     new_centroids[i] = calloc(dim + 1, sizeof(double));
+    //     if (centroids[i] == NULL || new_centroids[i] == NULL){
+    //         printf("An Error Has Occurred");
+    //         return 1;
+    //     }
+    // }
 
-    initialize_error = initialize_centroids(k, dim, input_filename, centroids);
-    if (initialize_error == 1){
-        printf("An Error Has Occurred");
-        return 1;
-    } else if (initialize_error == 2){
-        printf("Invalid Input!");
-        return 1;
-    }
+    // initialize_error = initialize_centroids(k, dim, input_filename, centroids);
+    // if (initialize_error == 1){
+    //     printf("An Error Has Occurred");
+    //     return 1;
+    // } else if (initialize_error == 2){
+    //     printf("Invalid Input!");
+    //     return 1;
+    // }
 
-    for (i=0; i < maxiter; i++) {
-        error = kmeans_iteration(k, dim, input_filename, centroids, new_centroids);
-        if (error || checkForZeros(k, dim, new_centroids)){
-            printf("An Error Has Occurred");
-            return 1;
-        }
-        maxd = max_distance_between_centroids(k, dim, centroids, new_centroids);
-        temp = &centroids[0];
-        centroids = &new_centroids[0];
-        new_centroids = &temp[0];
-        if (maxd < 0.001) {
-            break;
-        }
-        initarray(dim, k, new_centroids);
-    }
+    // for (i=0; i < maxiter; i++) {
+    //     error = kmeans_iteration(k, dim, input_filename, centroids, new_centroids);
+    //     if (error || checkForZeros(k, dim, new_centroids)){
+    //         printf("An Error Has Occurred");
+    //         return 1;
+    //     }
+    //     maxd = max_distance_between_centroids(k, dim, centroids, new_centroids);
+    //     temp = &centroids[0];
+    //     centroids = &new_centroids[0];
+    //     new_centroids = &temp[0];
+    //     if (maxd < 0.001) {
+    //         break;
+    //     }
+    //     initarray(dim, k, new_centroids);
+    // }
 
-    error = write_result(k, dim, output_filename, centroids);
-    if (error){
-        printf("An Error Has Occurred");
-        return 1;
-    }
+    // error = write_result(k, dim, output_filename, centroids);
+    // if (error){
+    //     printf("An Error Has Occurred");
+    //     return 1;
+    // }
     
-    for (i=0; i < k; i++) {
-        free(centroids[i]);
-        free(new_centroids[i]);
-    }
-    free(centroids);
-    free(new_centroids);
+    // for (i=0; i < k; i++) {
+    //     free(centroids[i]);
+    //     free(new_centroids[i]);
+    // }
+    // free(centroids);
+    // free(new_centroids);
     return 0;
 }
 
@@ -291,14 +292,20 @@ void printcentroids(int k, int d, double **c){
 
 
 static PyObject* kmeans_capi(PyObject *self, PyObject *args){
-    PyObject *data_points, *init_centroids;
-    double maxiter, epsilon;
+    PyObject *data_points;
+    PyObject *init_centroids;
+    int maxiter;
+    double epsilon;
+    Py_ssize_t n;
 
-    if (!PyArg_ParseTuple(args, "OOdi", &data_points, &init_centroids, &maxiter, &epsilon)){
-        printf("An Error Has Occurred");
-        return 1;
+
+    if (!PyArg_ParseTuple(args, "OOid", &data_points, &init_centroids, &maxiter, &epsilon)){
+        printf("An Error Has Occurred303\n");
+        exit(1);
     }
-
+    data_points = PyList_GetItem(data_points, 0);
+    n = PyList_Size(data_points);
+    printf("size: %zu\n", n);
     return Py_BuildValue("O", kmeans(data_points, init_centroids, maxiter, epsilon));
 }
 
@@ -328,8 +335,8 @@ PyMODINIT_FUNC PyInit_mykmeanssp(void) {
     PyObject *m;
     m=PyModule_Create(&moduledef);
     if (!m) {
-        printf("An Error Has Occurred");
-        return 1;
+        printf("An Error Has Occurred336\n");
+        exit(1);
     }
     return m;
 }
