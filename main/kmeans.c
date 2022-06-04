@@ -3,12 +3,12 @@
 #include <float.h>
 #include <math.h>
 #include <ctype.h>
-
+void init_new_centroids(Py_ssize_t dim, Py_ssize_t k, PyObject *new_centroids);
 int kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsilon);
 int initialize_centroids(int k, int dim, char *input_file, double**);
 int get_dimension(char *input_file);
 double max_distance_between_centroids(int k, int dim, double **old_centroids, double **new_centroids);
-int kmeans_iteration(int k, int dim, char *input_file, double **centroids, double **new_centroids);
+//int kmeans_iteration(int k, int dim, char *input_file, double **centroids, double **new_centroids);
 int find_closest_centroid(int k, int dim, double *vector, double **centroids);
 void initarray(int dim, int k, double **arr);
 int write_result(int k, int dim, char *outname, double **data);
@@ -18,49 +18,39 @@ void printcentroids(int k, int d, double **c);
 
 int kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsilon)
 {      
-
     // char *output_filename, *input_filename; //TODO: delete
-    // int k, dim, initialize_error, error;
-    // double **centroids, **new_centroids, **temp;
+    // int error;
+    // double **temp;
     // double maxd;
-    // int i;
+    
+    PyObject *new_centroids;
+    Py_ssize_t i, j;
+    Py_ssize_t dim;
+    Py_ssize_t k;
+    //PyObject *tempfloat;
 
-    //TODO: find k
-    //TODO: check if maxiter
-    //maxiter = argc==5 ? atoi(argv[2]) : INT_MAX;
     
 
+    dim = PyList_Size(PyList_GetItem(data_points, 0));
+    k = PyList_Size(centroids);
+    maxiter = maxiter == -1 ? INT_MAX: maxiter;
+    new_centroids = PyList_New(k);
+    init_new_centroids(dim, k, new_centroids);
 
-    // dim = get_dimension(input_filename);
-    // if (dim == -1){
-    //     printf("An Error Has Occurred");
-    //     return 1;
-    // }
-
-    // centroids = calloc(k, sizeof(double *));
-    // new_centroids = calloc(k, sizeof(double *));
-    // if (centroids == NULL || new_centroids == NULL){
-    //     printf("An Error Has Occurred");
-    //     return 1;
-    // }
+    for (i=0; i < k; i++) {
+        for (j=0; j < dim; j++){
+            //tempfloat = PyList_GetItem(PyList_GetItem(new_centroids, i), j);
+            printf("%f,",PyFloat_AsDouble(PyList_GetItem(PyList_GetItem(new_centroids, i), j)));
+        }
+        printf("\n");
+    }
     
-    // for (i=0; i < k; i++) {
-    //     centroids[i] = calloc(dim + 1, sizeof(double));
-    //     new_centroids[i] = calloc(dim + 1, sizeof(double));
-    //     if (centroids[i] == NULL || new_centroids[i] == NULL){
-    //         printf("An Error Has Occurred");
-    //         return 1;
-    //     }
-    // }
+    //printf("size of dim: %zu\nsize of k: %zu\n", dim, k);
 
-    // initialize_error = initialize_centroids(k, dim, input_filename, centroids);
-    // if (initialize_error == 1){
-    //     printf("An Error Has Occurred");
-    //     return 1;
-    // } else if (initialize_error == 2){
-    //     printf("Invalid Input!");
-    //     return 1;
-    // }
+
+
+
+
 
     // for (i=0; i < maxiter; i++) {
     //     error = kmeans_iteration(k, dim, input_filename, centroids, new_centroids);
@@ -93,6 +83,24 @@ int kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsil
     return 0;
 }
 
+void init_new_centroids(Py_ssize_t dim, Py_ssize_t k, PyObject *new_centroids){
+    Py_ssize_t i, j;
+    PyObject * temp;
+
+
+    if (new_centroids == NULL){
+        printf("An Error Has Occurred");
+        exit(1);
+    }
+
+    for (i=0; i < k; i++) {
+        temp = PyList_New(dim);
+        PyList_SetItem(new_centroids, i, temp);
+        for (j=0; j < dim; j++){
+            PyList_SetItem(temp, j, PyFloat_FromDouble(0.));
+        }
+    }
+}
 
 double max_distance_between_centroids(int k, int dim, double **old_centroids, double **new_centroids) {
     double max_value = DBL_MIN;
@@ -113,42 +121,49 @@ double max_distance_between_centroids(int k, int dim, double **old_centroids, do
 }
 
 
-int kmeans_iteration(int k, int dim, char *input_file, double **centroids, double **new_centroids) {
-    FILE *ifp;
-    int closet_centroid_index, end;
-    double *vector;
-    char c;
-    vector = calloc(dim, sizeof(double));
-    if (vector == NULL){
-        return 1;
-    }
+// int kmeans_iteration(PyObject *data_points , PyObject *centroids, PyObject *new_centroids) {
+//     Py_ssize_t dim;
+//     Py_ssize_t k;
+//     FILE *ifp;
+//     int closet_centroid_index, end;
+//     double *vector;
+//     char c;
+    
+//     dim = PyList_Size(PyList_GetItem(data_points, 0));
+//     k = PyList_Size(centroids);
 
-    ifp = fopen(input_file, "r");
-    if (ifp == NULL) {
-        return 1;
-    }
 
-    while (!feof(ifp)) {
-        int j;
-        for (j=0; j < dim; j++) {
-            end = fscanf(ifp, "%lf%c", &vector[j], &c);
-        }
-        if (end != 2){
-            break;
-        }
+//     vector = calloc(dim, sizeof(double));
+//     if (vector == NULL){
+//         return 1;
+//     }
 
-        closet_centroid_index = find_closest_centroid(k, dim, vector, centroids);
+//     ifp = fopen(input_file, "r");
+//     if (ifp == NULL) {
+//         return 1;
+//     }
 
-        for (j = 0; j < dim; j++) {
-            new_centroids[closet_centroid_index][j] += vector[j];
-        }
+//     while (!feof(ifp)) {
+//         int j;
+//         for (j=0; j < dim; j++) {
+//             end = fscanf(ifp, "%lf%c", &vector[j], &c);
+//         }
+//         if (end != 2){
+//             break;
+//         }
 
-        new_centroids[closet_centroid_index][dim] ++;
-    }
-    free(vector);
-    fclose(ifp);
-    return 0;
-}
+//         closet_centroid_index = find_closest_centroid(k, dim, vector, centroids);
+
+//         for (j = 0; j < dim; j++) {
+//             new_centroids[closet_centroid_index][j] += vector[j];
+//         }
+
+//         new_centroids[closet_centroid_index][dim] ++;
+//     }
+//     free(vector);
+//     fclose(ifp);
+//     return 0;
+// }
 
 int checkForZeros(int k, int dim, double **centroids){
     int i;
@@ -296,16 +311,12 @@ static PyObject* kmeans_capi(PyObject *self, PyObject *args){
     PyObject *init_centroids;
     int maxiter;
     double epsilon;
-    Py_ssize_t n;
-
 
     if (!PyArg_ParseTuple(args, "OOid", &data_points, &init_centroids, &maxiter, &epsilon)){
         printf("An Error Has Occurred303\n");
         exit(1);
     }
-    data_points = PyList_GetItem(data_points, 0);
-    n = PyList_Size(data_points);
-    printf("size: %zu\n", n);
+
     return Py_BuildValue("O", kmeans(data_points, init_centroids, maxiter, epsilon));
 }
 
