@@ -20,6 +20,7 @@ def main():
         input_data_frame = get_df(args.get(Env.input_file1),
                                   args.get(Env.input_file2))
         data_points = pd.DataFrame.to_numpy(input_data_frame, dtype=float)
+        print(data_points)
         initial_centroids = get_centriods(data_points, args.get(Env.k))
         data_points = [c.tolist() for c in data_points]
         # Here come s the integration
@@ -45,14 +46,17 @@ def get_centriods(np_array, k):
         np.divide(weighted_p, distance_sum, out=weighted_p)
         new_cent_index = np.random.choice(n, p=weighted_p)
         centroids.append(np_array[new_cent_index])
-    return [c.tolist() for c in centroids]
+    centroids = [c.tolist() for c in centroids]
+    for c in centroids:
+        c.append(1.0)
+    return centroids
 
 
 def get_df(input_file1, input_file2):
     df1 = pd.read_csv(input_file1, header=None, dtype=float)
     df2 = pd.read_csv(input_file2, header=None, dtype=float)
     final_df = pd.merge(df1, df2, how='inner', on=0, copy=False, sort=True)
-    final_df.drop(columns=0, inplace=True)
+    # final_df.drop(columns=0, inplace=True)
     return final_df
 
 
