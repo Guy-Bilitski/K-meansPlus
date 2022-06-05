@@ -20,22 +20,29 @@ def main():
         input_data_frame = get_df(args.get(Env.input_file1),
                                   args.get(Env.input_file2))
         data_points = pd.DataFrame.to_numpy(input_data_frame, dtype=float)
-        print(data_points)
         initial_centroids = get_centriods(data_points, args.get(Env.k))
         data_points = [c.tolist() for c in data_points]
         # Here come s the integration
-        mykmeanssp.getKmeans(data_points, initial_centroids, args.get(Env.maxiter, -1), args.get(Env.epsilon))
+        final_centroids = mykmeanssp.fit(data_points, initial_centroids, args.get(Env.maxiter, -1), args.get(Env.epsilon))
+        print_centroids(final_centroids)
     except Exception as ex:
         print(ex)
         return
-    
+
+
+def print_centroids(centroids):
+    for c in centroids:
+        s = ""
+        for k in c:
+            s += '%.4f,' % k
+        print(s)
 
 
 def get_centriods(np_array, k):
     np.random.seed(0)
     n = np_array.shape[0]
-    c1 = np_array[np.random.choice(n)]
-    centroids = [c1]
+    indices = [np.random.choice(n)]
+    centroids = [np_array[indices[0]]]
     weighted_p = np.zeros(n, dtype=float)
 
     for _ in range(k - 1):
@@ -46,9 +53,11 @@ def get_centriods(np_array, k):
         np.divide(weighted_p, distance_sum, out=weighted_p)
         new_cent_index = np.random.choice(n, p=weighted_p)
         centroids.append(np_array[new_cent_index])
+        indices.append(new_cent_index)
     centroids = [c.tolist() for c in centroids]
     for c in centroids:
         c.append(1.0)
+    print(indices)
     return centroids
 
 
@@ -56,7 +65,7 @@ def get_df(input_file1, input_file2):
     df1 = pd.read_csv(input_file1, header=None, dtype=float)
     df2 = pd.read_csv(input_file2, header=None, dtype=float)
     final_df = pd.merge(df1, df2, how='inner', on=0, copy=False, sort=True)
-    # final_df.drop(columns=0, inplace=True)
+    final_df.drop(columns=0, inplace=True)
     return final_df
 
 
@@ -66,7 +75,7 @@ def load_args():
 
     args = {}
     if len(inp) < 5 or len(inp) > 6:
-        raise Exception("Invalid Input!")
+        raise Exception("Invalid Input!\n")
     try:
         args[Env.k] = int(inp[1])
         if args[Env.k] < 1:
@@ -91,6 +100,5 @@ def load_args():
         raise Exception("Invalid Input!")
     
     return args
-
 
 main()

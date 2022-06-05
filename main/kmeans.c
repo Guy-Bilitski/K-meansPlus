@@ -5,18 +5,19 @@
 #include <ctype.h>
 
 void init_new_centroids(Py_ssize_t dim, Py_ssize_t k, PyObject *new_centroids);
-int kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsilon);
+PyObject * kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsilon);
 double max_distance_between_centroids(PyObject *old_centroids, PyObject *new_centroids);
 void kmeans_iteration(PyObject *data_points , PyObject *centroids, PyObject *new_centroids);
 Py_ssize_t find_closest_centroid(PyObject *vector, PyObject *centroids);
 void initarray(PyObject *matrix);
-int write_result(int k, int dim, char *outname, double **data);
 int checkForZeros(int k, int dim, double **centroids);
 void print_pymatrix(PyObject *matrix);
+void print_centroids(PyObject *matrix);
+void fix_final_centroids_matrix(PyObject *matrix);
 
 
-int kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsilon)
-{      
+PyObject * kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsilon)
+{
     PyObject *new_centroids, *temp;
     Py_ssize_t dim;
     Py_ssize_t k;
@@ -35,26 +36,17 @@ int kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsil
         kmeans_iteration(data_points, centroids, new_centroids);
         maxd = max_distance_between_centroids(centroids, new_centroids);
 
-        printf("\nC:\n");
-        print_pymatrix(centroids);
-        printf("\nNC:\n");
-        print_pymatrix(new_centroids);
-
         temp = centroids;
         centroids = new_centroids;
         new_centroids = temp;
-
-        printf("\nC after:\n");
-        print_pymatrix(centroids);
-        printf("\nNC after:\n");
-        print_pymatrix(new_centroids);
         
         if (maxd < epsilon) {
             break;
         }
         initarray(new_centroids);
     }
-    return 0;
+    fix_final_centroids_matrix(centroids);
+    return centroids;
 }
 
 void init_new_centroids(Py_ssize_t dim, Py_ssize_t k, PyObject *new_centroids){
@@ -67,7 +59,7 @@ void init_new_centroids(Py_ssize_t dim, Py_ssize_t k, PyObject *new_centroids){
     }
 
     for (i=0; i < k; i++) {
-        temp = PyList_New(dim);
+        temp = PyList_New(dim+1);
         PyList_SetItem(new_centroids, i, temp);
         for (j=0; j <= dim; j++){
             PyList_SetItem(temp, j, PyFloat_FromDouble(0.));
@@ -189,27 +181,6 @@ void initarray(PyObject *junk_centroids){
 
 
 
-int write_result(int k, int dim, char *outname, double **data){
-    FILE *ofp;
-    int i,j;
-    ofp = fopen(outname, "w");
-    if (ofp == NULL) {
-        return 1;
-    }
-    for (i = 0; i<k; i++){
-        for (j=0; j<dim; j++){
-            fprintf(ofp, "%.4f",data[i][j]/data[i][dim]);
-            if (j < dim-1){
-                fprintf(ofp, ",");
-            } else {
-                fprintf(ofp, "\n");
-            }
-        }
-    }
-    fclose(ofp);
-    return 0;
-}
-
 void print_pymatrix(PyObject *matrix){
     Py_ssize_t i, j;
     Py_ssize_t dim;
@@ -224,6 +195,50 @@ void print_pymatrix(PyObject *matrix){
             printf("%f,",PyFloat_AsDouble(pyfloat));
         }
         printf("\n");
+    }
+}
+
+void print_centroids(PyObject *matrix){
+    Py_ssize_t i, j;
+    Py_ssize_t dim;
+    Py_ssize_t k;
+    PyObject *pyfloat;
+    double num;
+
+    k = PyList_Size(matrix);
+    dim = PyList_Size(PyList_GetItem(matrix, 0));
+    for (i=0; i < k; i++) {
+        num = PyFloat_AsDouble(PyList_GetItem(PyList_GetItem(matrix, i), dim-1));
+        for (j=0; j < dim-1; j++){
+            pyfloat = PyList_GetItem(PyList_GetItem(matrix, i), j);
+            printf("%f,",PyFloat_AsDouble(pyfloat)/num);
+        }
+        printf("\n");
+    }
+}
+
+void fix_final_centroids_matrix(PyObject *matrix){
+    Py_ssize_t i, j;
+    Py_ssize_t dim;
+    Py_ssize_t k;
+    PyObject *pyfloat, *sublist;
+    double num, entry;
+
+    k = PyList_Size(matrix);
+    dim = PyList_Size(PyList_GetItem(matrix, 0));
+
+    for (i=0; i < k; i++) { //dividing each entry by sum
+        num = PyFloat_AsDouble(PyList_GetItem(PyList_GetItem(matrix, i), dim-1));
+        for (j=0; j < dim-1; j++){
+            pyfloat = PyList_GetItem(PyList_GetItem(matrix, i), j);
+            entry = PyFloat_AsDouble(pyfloat)/num;
+            PyList_SetItem(PyList_GetItem(matrix, i), j, PyFloat_FromDouble(entry));
+        }
+    }
+
+    for (i=0; i < k; i++) { //popping the sum entry
+        sublist = PyList_GetSlice(PyList_GetItem(matrix, i), 0, dim-1);
+        PyList_SetItem(matrix, i, sublist);
     }
 }
 
@@ -244,7 +259,7 @@ static PyObject* kmeans_capi(PyObject *self, PyObject *args){
 
 static PyMethodDef capiMethods[] = {
     {
-        "getKmeans",
+        "fit",
         (PyCFunction) kmeans_capi,
         METH_VARARGS,
         PyDoc_STR("Args:\nData-Points: ndarray,\nCentroids: list[list]\nmaxiter: int\nepsilon: float")
