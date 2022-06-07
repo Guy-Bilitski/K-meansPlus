@@ -1,5 +1,3 @@
-from mimetypes import init
-from operator import indexOf
 import sys
 import pandas as pd
 import numpy as np
@@ -17,25 +15,38 @@ class Env:
 def main():
     try:
         args = load_args()
+    except Exception as ex:
+        print(ex)
+        return 1
+    try:
         input_data_frame = get_df(args.get(Env.input_file1),
                                   args.get(Env.input_file2))
         data_points = pd.DataFrame.to_numpy(input_data_frame, dtype=float)
-        initial_centroids = get_centriods(data_points, args.get(Env.k))
+        indices, initial_centroids = get_centriods(data_points, args.get(Env.k))
         data_points = [c.tolist() for c in data_points]
-        # Here come s the integration
         final_centroids = mykmeanssp.fit(data_points, initial_centroids, args.get(Env.maxiter, -1), args.get(Env.epsilon))
-        print_centroids(final_centroids)
+        print_centroids(indices, final_centroids)
     except Exception as ex:
-        print(ex)
-        return
+        print("An Error Has Occurred")
+        return 1
+    return 0
 
 
-def print_centroids(centroids):
+def print_centroids(indices, centroids):
+    line = []
+    for i in indices:
+        line.append(f'{i},')
+    if len(line) > 0:
+        line[-1] = line[-1][:-1]
+        print("".join(line))
+    
     for c in centroids:
-        s = ""
-        for k in c:
-            s += '%.4f,' % k
-        print(s)
+        line = []
+        for i in c:
+            line.append('%.4f,' % i)
+        if len(line) > 0:
+            line[-1] = line[-1][:-1]
+            print("".join(line))
 
 
 def get_centriods(np_array, k):
@@ -55,10 +66,7 @@ def get_centriods(np_array, k):
         centroids.append(np_array[new_cent_index])
         indices.append(new_cent_index)
     centroids = [c.tolist() for c in centroids]
-    for c in centroids:
-        c.append(1.0)
-    print(indices)
-    return centroids
+    return (indices, centroids)
 
 
 def get_df(input_file1, input_file2):
@@ -75,7 +83,7 @@ def load_args():
 
     args = {}
     if len(inp) < 5 or len(inp) > 6:
-        raise Exception("Invalid Input!\n")
+        raise Exception("Invalid Input!")
     try:
         args[Env.k] = int(inp[1])
         if args[Env.k] < 1:

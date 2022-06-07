@@ -14,6 +14,8 @@ int checkForZeros(int k, int dim, double **centroids);
 void print_pymatrix(PyObject *matrix);
 void print_centroids(PyObject *matrix);
 void fix_final_centroids_matrix(PyObject *matrix);
+void add_sum_entry_to_centroids(PyObject *centroids);
+void checkForError();
 
 
 PyObject * kmeans(PyObject *data_points, PyObject *centroids, int maxiter, double epsilon)
@@ -30,7 +32,7 @@ PyObject * kmeans(PyObject *data_points, PyObject *centroids, int maxiter, doubl
     maxiter = maxiter == -1 ? INT_MAX: maxiter;
     new_centroids = PyList_New(k);
     init_new_centroids(dim, k, new_centroids);
-    
+    add_sum_entry_to_centroids(centroids);
 
     for (iter=0; iter < maxiter; iter++) {
         kmeans_iteration(data_points, centroids, new_centroids);
@@ -46,7 +48,29 @@ PyObject * kmeans(PyObject *data_points, PyObject *centroids, int maxiter, doubl
         initarray(new_centroids);
     }
     fix_final_centroids_matrix(centroids);
+    checkForError();
+
     return centroids;
+}
+
+void checkForError(){
+    if (PyErr_Occurred() != NULL){
+        printf("An Error Has Occurred\n");
+        exit(1);
+    }
+}
+
+void add_sum_entry_to_centroids(PyObject *centroids){
+    Py_ssize_t i, k;
+    PyObject *cent;
+    k = PyList_Size(centroids);
+    for (i=0; i<k; i++){
+        cent = PyList_GetItem(centroids, i);
+        if (PyList_Append(cent, PyFloat_FromDouble(1.))){
+            printf("An Error Has Occurred\n");
+            exit(1);
+        }
+    }
 }
 
 void init_new_centroids(Py_ssize_t dim, Py_ssize_t k, PyObject *new_centroids){
@@ -74,6 +98,7 @@ double max_distance_between_centroids(PyObject *old_centroids, PyObject *new_cen
 
     double max_value = DBL_MIN;
     double current_value;
+    double old_denomin, new_denomin;
 
     dim = PyList_Size(PyList_GetItem(new_centroids, 0))-1;
     k = PyList_Size(new_centroids);
@@ -83,9 +108,15 @@ double max_distance_between_centroids(PyObject *old_centroids, PyObject *new_cen
         old_c = PyList_GetItem(old_centroids, i);
         new_c = PyList_GetItem(new_centroids, i);
         for (j=0; j < dim; j++) {
+            old_denomin = PyFloat_AsDouble(PyList_GetItem(old_c, dim));
+            new_denomin = PyFloat_AsDouble(PyList_GetItem(new_c, dim));
+            if (old_denomin == 0 || new_denomin == 0){
+                printf("An Error Has Occurred\n");
+                exit(1);
+            }
             current_value += pow(
-                PyFloat_AsDouble(PyList_GetItem(old_c, j)) / PyFloat_AsDouble(PyList_GetItem(old_c, dim)) - 
-                PyFloat_AsDouble(PyList_GetItem(new_c, j)) / PyFloat_AsDouble(PyList_GetItem(new_c, dim)), 2
+                (PyFloat_AsDouble(PyList_GetItem(old_c, j)) / old_denomin) - 
+                (PyFloat_AsDouble(PyList_GetItem(new_c, j)) / new_denomin), 2
                 );
         }
         if (current_value > max_value) {
@@ -125,15 +156,6 @@ void kmeans_iteration(PyObject *data_points , PyObject *centroids, PyObject *new
     }
 }
 
-int checkForZeros(int k, int dim, double **centroids){
-    int i;
-    for (i = 0; i < k; i++) {
-        if (centroids[i][dim] == 0){
-            return 1;
-        }
-    }
-    return 0;
-}
 
 Py_ssize_t find_closest_centroid(PyObject *vector, PyObject *centroids) {
     Py_ssize_t dim, k;
@@ -144,15 +166,21 @@ Py_ssize_t find_closest_centroid(PyObject *vector, PyObject *centroids) {
 
     double closest_value = DBL_MAX;
     double current_value = 0;
+    double denomin;
     Py_ssize_t closest_index = -1;
 
     for (i = 0; i < k; i++) {
         current_value = 0;
         centroid_i = PyList_GetItem(centroids, i);
         for (j=0; j < dim; j++) {
+            denomin = PyFloat_AsDouble(PyList_GetItem(centroid_i, dim));
+            if (denomin == 0){
+                printf("An Error Has Occurred\n");
+                exit(1);
+            }
             current_value += pow(
                 PyFloat_AsDouble(PyList_GetItem(vector, j)) - 
-                PyFloat_AsDouble(PyList_GetItem(centroid_i, j)) / PyFloat_AsDouble(PyList_GetItem(centroid_i, dim)), 2);
+                PyFloat_AsDouble(PyList_GetItem(centroid_i, j)) / denomin, 2);
         }
         if (current_value < closest_value) {
             closest_value = current_value;
@@ -249,8 +277,8 @@ static PyObject* kmeans_capi(PyObject *self, PyObject *args){
     int maxiter;
     double epsilon;
 
-    if (!PyArg_ParseTuple(args, "OOid", &data_points, &init_centroids, &maxiter, &epsilon)){
-        printf("An Error Has Occurred303\n");
+    if (!(PyArg_ParseTuple(args, "OOid", &data_points, &init_centroids, &maxiter, &epsilon))){
+        printf("An Error Has Occurred\n");
         exit(1);
     }
 
@@ -283,7 +311,7 @@ PyMODINIT_FUNC PyInit_mykmeanssp(void) {
     PyObject *m;
     m=PyModule_Create(&moduledef);
     if (!m) {
-        printf("An Error Has Occurred336\n");
+        printf("An Error Has Occurred\n");
         exit(1);
     }
     return m;
