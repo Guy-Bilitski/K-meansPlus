@@ -49,22 +49,20 @@ def print_centroids(indices, centroids):
             print("".join(line))
 
 
-def get_centriods(np_array_with_indices, k):
-    np_array = np_array_with_indices[:,1:]
+def get_centriods(np_array, k):
     np.random.seed(0)
     n = np_array.shape[0]
-    indices = [np.random.choice(np_array_with_indices[:,0])]
-    centroids = [np.squeeze(np_array[np_array_with_indices[:,0]== indices[0]])]
+    indices = [np.random.choice(np_array[:,0])]
+    centroids = [np.squeeze(np_array[:,1:][np_array[:,0]== indices[0]])] # initializing the first centroid
     weighted_p = np.zeros(n, dtype=float)
-
     for _ in range(k - 1):
         for j in range(n):
-            x = np_array[j]
+            x = np_array[j,1:]
             weighted_p[j] = (min(np.linalg.norm(x - c) for c in centroids))**2
         distance_sum = sum(weighted_p)
         np.divide(weighted_p, distance_sum, out=weighted_p)
-        new_cent_index = np.random.choice(np_array_with_indices[:,0], p=weighted_p)
-        centroids.append(np.squeeze(np_array[np_array_with_indices[:,0]== new_cent_index]))
+        new_cent_index = np.random.choice(np_array[:,0], p=weighted_p)
+        centroids.append(np.squeeze(np_array[:,1:][np_array[:,0] == new_cent_index]))
         indices.append(new_cent_index)
     centroids = [c.tolist() for c in centroids]
     indices = [int(i) for i in indices]
@@ -75,7 +73,6 @@ def get_df(input_file1, input_file2):
     df1 = pd.read_csv(input_file1, header=None, dtype=float)
     df2 = pd.read_csv(input_file2, header=None, dtype=float)
     final_df = pd.merge(df1, df2, how='inner', on=0, copy=False, sort=True)
-    #final_df.drop(columns=0, inplace=True)
     return final_df
 
 
